@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app import schemas, crud
 from app.database import get_db
+from app.schemas import CompanyAddTagsReq
 
 company_router = APIRouter(tags=["회사"])
 
@@ -72,3 +73,23 @@ def search_companies_by_tag(
     """
     companies = crud.search_companies_by_tag_name(db, tag_query=query, language_code=x_wanted_language)
     return companies
+
+
+@company_router.put(
+    "/companies/{company_name}/tags",
+    response_model=schemas.CompanyAddTagsRes,
+    summary="5. 회사 태그 정보 추가",
+)
+def add_tags_to_company(
+    company_name: str,
+    req: CompanyAddTagsReq,
+    x_wanted_language: str = Header("en"),
+    db: Session = Depends(get_db),
+):
+    """
+    저장 완료후 header의 x-wanted-language 언어값에 따라 해당 언어로 출력되어야 합니다.
+    """
+    result = crud.add_tags_to_company(db=db, company_name=company_name, tag_data_list=req, language_code=x_wanted_language)
+    if not result:
+        return {"detail": "없는 회사입니다."}, 404
+    return result

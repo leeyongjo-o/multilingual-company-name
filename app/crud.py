@@ -2,7 +2,7 @@ from sqlalchemy import asc, func
 from sqlalchemy.orm import Session
 
 from app.models import CompanyName, Language, Tag, Company, CompanyTag
-from app.schemas import CompanySearchByCompanyNameRes, CompanyCreateReq
+from app.schemas import CompanySearchByCompanyNameRes, CompanyCreateReq, TagName, CompanyAddTagsReq
 
 
 def get_company_name_by_contain_company_name(db: Session, company_name: str, language_code: str):
@@ -123,3 +123,49 @@ def search_companies_by_tag_name(db: Session, tag_query: str, language_code: str
     # 서브 쿼리에서 선택한 이름을 가져옴
     results = db.query(subquery.c.company_name).all()
     return [{"company_name": row.company_name} for row in results]
+
+
+def add_tags_to_company(db: Session, company_name: str, tag_data_list: CompanyAddTagsReq, language_code: str):
+    # 회사 찾기
+    company = db.query(Company).join(CompanyName).filter(CompanyName.name == company_name).first()
+    if not company:
+        return None
+
+    # 태그 추가 또는 업데이트
+    for tag_data in tag_data_list:
+        for lang_code, tag_name in tag_data.tag_name.items():
+            language = db.query(Language).filter(Language.code == lang_code).first()
+            if not language:
+                language = Language(code=lang_code, name=lang_code)
+                db.add(language)
+                db.commit()
+                db.refresh(language)
+
+            # 태그 찾기 또는 생성
+            tag = db.query(Tag).join(Language).filter(Tag.name == tag_name, Language.code == lang_code).first()
+            if not tag:
+                tag = Tag(name=tag_name, language_id=language.id)
+                db.add(tag)
+                db.commit()
+                db.refresh(tag)
+
+            # 회사에 태그 추가
+            if tag not in company.tags:
+                company_tag = CompanyTag(company_id=company.id, tag_id=tag.id)
+                db.add(company_tag)
+
+    db.commit()
+
+    # 회사의 태그 정보 반환
+    company_name_obj = db.query(CompanyName).join(Language).filter(CompanyName.company_id == company.id,
+                                                                   Language.code == language_code).first()
+    if not company_name_obj:
+        company_name_obj = db.query(CompanyName).filter(CompanyName.company_id == company.id).first()
+
+    tags = db.query(Tag).join(Language).join(CompanyTag).filter(CompanyTag.company_id == company.id,
+                                                                Language.code == language_code).all()
+
+    return {
+        "company_name": company_name_obj.name,
+        "tags": sorted([tag.name for tag in tags], key=lambda name: int(name.split('_')[-1]))
+    }

@@ -26,3 +26,11 @@ class CompanyCreateRes(BaseModel):
 
 class CompanySearchByTagRes(BaseModel):
     company_name: str
+
+
+CompanyAddTagsReq = list[TagName]
+
+
+class CompanyAddTagsRes(BaseModel):
+    company_name: str
+    tags: list[str]
