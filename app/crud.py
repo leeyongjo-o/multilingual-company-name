@@ -1,4 +1,4 @@
-from sqlalchemy import asc
+from sqlalchemy import asc, func
 from sqlalchemy.orm import Session
 
 from app.models import CompanyName, Language, Tag, Company, CompanyTag
@@ -92,3 +92,34 @@ def create_company(db: Session, company_data: CompanyCreateReq, language_code: s
         "company_name": company_name.name if company_name else "",
         "tags": [tag.name for tag in tags]
     }
+
+
+def search_companies_by_tag_name(db: Session, tag_query: str, language_code: str):
+    # 태그명으로 회사 검색
+    subquery = (
+        db.query(
+            Company.id,
+            func.coalesce(
+                db.query(CompanyName.name)
+                .join(Language)
+                .filter(
+                    CompanyName.company_id == Company.id,
+                    Language.code == language_code
+                )
+                .scalar_subquery(),
+                db.query(CompanyName.name)
+                .filter(CompanyName.company_id == Company.id)
+                .limit(1)
+                .scalar_subquery()
+            ).label("company_name")
+        )
+        .join(CompanyTag, CompanyTag.company_id == Company.id)
+        .join(Tag, Tag.id == CompanyTag.tag_id)
+        .filter(Tag.name.ilike(f"%{tag_query}%"))
+        .distinct(Company.id)
+        .subquery()
+    )
+
+    # 서브 쿼리에서 선택한 이름을 가져옴
+    results = db.query(subquery.c.company_name).all()
+    return [{"company_name": row.company_name} for row in results]

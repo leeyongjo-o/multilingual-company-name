@@ -22,3 +22,7 @@ class CompanyCreateReq(BaseModel):
 class CompanyCreateRes(BaseModel):
     company_name: str
     tags: list[str]
+
+
+class CompanySearchByTagRes(BaseModel):
+    company_name: str

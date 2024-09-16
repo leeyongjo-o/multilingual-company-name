@@ -52,3 +52,23 @@ def create_company(
     """
     result = crud.create_company(db=db, company_data=company_data, language_code=x_wanted_language)
     return result
+
+@company_router.get(
+    "/tags",
+    response_model=list[schemas.CompanySearchByTagRes],
+    summary="4. 태그명으로 회사 검색",
+)
+def search_companies_by_tag(
+    query: str,
+    x_wanted_language: str = Header("ko"),
+    db: Session = Depends(get_db),
+):
+    """
+    태그로 검색 관련된 회사가 검색되어야 합니다.\n
+    다국어로 검색이 가능해야 합니다.\n
+    일본어 태그로 검색을 해도 language가 ko이면 한국 회사명이 노출이 되어야 합니다.\n
+    ko언어가 없을경우 노출가능한 언어로 출력합니다.\n
+    동일한 회사는 한번만 노출이 되어야합니다.
+    """
+    companies = crud.search_companies_by_tag_name(db, tag_query=query, language_code=x_wanted_language)
+    return companies
