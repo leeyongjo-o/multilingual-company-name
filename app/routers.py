@@ -93,3 +93,23 @@ def add_tags_to_company(
     if not result:
         return {"detail": "없는 회사입니다."}, 404
     return result
+
+
+@company_router.delete(
+    "/companies/{company_name}/tags/{tag_name}",
+    response_model=schemas.CompanyRemoveTagsRes,
+    summary="6. 회사 태그 정보 삭제",
+)
+def delete_tag_from_company(
+    company_name: str,
+    tag_name: str,
+    x_wanted_language: str = Header("en"),
+    db: Session = Depends(get_db),
+):
+    """
+    저장 완료후 header의 x-wanted-language 언어값에 따라 해당 언어로 출력되어야 합니다.
+    """
+    result = crud.delete_tag_from_company(db=db, company_name=company_name, tag_name=tag_name, language_code=x_wanted_language)
+    if not result:
+        return {"detail": "회사 또는 태그가 존재하지 않습니다."}, 404
+    return result

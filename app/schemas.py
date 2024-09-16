@@ -34,3 +34,7 @@ CompanyAddTagsReq = list[TagName]
 class CompanyAddTagsRes(BaseModel):
     company_name: str
     tags: list[str]
+
+
+class CompanyRemoveTagsRes(CompanyAddTagsRes):
+    pass

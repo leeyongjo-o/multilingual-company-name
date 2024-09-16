@@ -182,11 +182,11 @@ def add_tags_to_company(db: Session, company_name: str, tag_data_list: CompanyAd
         company_name_obj = db.query(CompanyName).filter(CompanyName.company_id == company.id).first()
 
     tags = db.query(Tag).join(Language).join(CompanyTag).filter(CompanyTag.company_id == company.id,
-                                                                Language.code == language_code).all()
+                                                                Language.code == language_code).order_by(asc(Tag.tag_group_id)).all()
 
     return {
         "company_name": company_name_obj.name,
-        "tags": sorted([tag.name for tag in tags], key=lambda name: int(name.split('_')[-1]))
+        "tags": [tag.name for tag in tags]
     }
 
 
@@ -210,7 +210,8 @@ def delete_tag_from_company(db: Session, company_name: str, tag_name: str, langu
 
     # 태그 삭제
     if tag_to_delete:
-        db.query(CompanyTag).filter(CompanyTag.company_id == company.id, CompanyTag.tag_id == tag_to_delete.id).delete()
+        company_tag_ids_to_delete = [company_tag.id for company_tag in db.query(CompanyTag).join(Tag).filter(CompanyTag.company_id == company.id, Tag.tag_group_id == tag_to_delete.tag_group_id).all()]
+        db.query(CompanyTag).filter(CompanyTag.id.in_(company_tag_ids_to_delete)).delete()
         db.commit()
 
     # 남은 태그 정보 반환
@@ -220,9 +221,9 @@ def delete_tag_from_company(db: Session, company_name: str, tag_name: str, langu
         company_name_obj = db.query(CompanyName).filter(CompanyName.company_id == company.id).first()
 
     tags = db.query(Tag).join(Language).join(CompanyTag).filter(CompanyTag.company_id == company.id,
-                                                                Language.code == language_code).all()
+                                                                Language.code == language_code).order_by(asc(Tag.tag_group_id)).all()
 
     return {
         "company_name": company_name_obj.name,
-        "tags": sorted([tag.name for tag in tags])
+        "tags": [tag.name for tag in tags]
     }
