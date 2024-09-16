@@ -8,3 +8,17 @@ class CompanySearchRes(BaseModel):
 class CompanySearchByCompanyNameRes(BaseModel):
     company_name: str
     tags: list[str]
+
+
+class TagName(BaseModel):
+    tag_name: dict[str, str]
+
+
+class CompanyCreateReq(BaseModel):
+    company_name: dict[str, str]
+    tags: list[TagName]
+
+
+class CompanyCreateRes(BaseModel):
+    company_name: str
+    tags: list[str]
