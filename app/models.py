@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, DateTime, func, ForeignKey, String, Table
+from sqlalchemy import Column, BigInteger, DateTime, func, ForeignKey, String, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -53,9 +53,13 @@ class Language(Base):
     tags = relationship("Tag", back_populates="language")
 
 
-company_tag = Table(
-    'company_tag',
-    Base.metadata,
-    Column('company_id', BigInteger, ForeignKey('company.id'), primary_key=True),
-    Column('tag_id', BigInteger, ForeignKey('tag.id'), primary_key=True)
-)
+class CompanyTag(Base):
+    __tablename__ = 'company_tag'
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    company_id = Column(BigInteger, ForeignKey('company.id'), nullable=False)
+    tag_id = Column(BigInteger, ForeignKey('tag.id'), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('company_id', 'tag_id', name='_company_tag_uc'),
+    )

@@ -1,3 +1,4 @@
+import uvicorn
 from fastapi import FastAPI
 
 from . import models
@@ -27,7 +28,8 @@ app = FastAPI(
 - 회사 태그 정보 삭제
     
     """,
-    version="1.0.0"
+    version="1.0.0",
+    debug=True
 )
 
 # 라우터 등록
@@ -37,3 +39,7 @@ app.include_router(company_router)
 @app.get("/ping", include_in_schema=False)
 def root():
     return {"message": "SUCCESS"}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
