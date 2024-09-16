@@ -1,9 +1,9 @@
 import uvicorn
 from fastapi import FastAPI
 
-from . import models
-from .database import engine
-from .routers import company_router
+from app import models
+from app.database import engine
+from app.routers import company_router
 
 # 데이터베이스 테이블 생성
 models.Base.metadata.create_all(bind=engine)
@@ -42,4 +42,4 @@ def root():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
