@@ -1,7 +1,7 @@
 from sqlalchemy import asc, func
 from sqlalchemy.orm import Session
 
-from app.models import CompanyName, Language, Tag, Company, CompanyTag
+from app.models import CompanyName, Language, Tag, Company, CompanyTag, TagGroup
 from app.schemas import CompanySearchByCompanyNameRes, CompanyCreateReq, TagName, CompanyAddTagsReq
 
 
@@ -60,7 +60,7 @@ def create_company(db: Session, company_data: CompanyCreateReq, language_code: s
         company_name = CompanyName(company_id=company.id, language_id=language.id, name=name)
         db.add(company_name)
 
-    # 태그 추가
+    # 언어, 태그 그룹, 태그 추가
     for tag_data in company_data.tags:
         for lang_code, tag_name in tag_data.tag_name.items():
             language = db.query(Language).filter(Language.code == lang_code).first()
@@ -70,9 +70,19 @@ def create_company(db: Session, company_data: CompanyCreateReq, language_code: s
                 db.commit()
                 db.refresh(language)
 
+            # 태그 찾기 또는 생성
             tag = db.query(Tag).join(Language).filter(Tag.name == tag_name, Language.code == lang_code).first()
             if not tag:
-                tag = Tag(name=tag_name, language_id=language.id)
+
+                # 태그 그룹 찾기 또는 생성
+                tag_group = db.query(TagGroup).join(Tag).filter(Tag.name.in_(tag_data.tag_name.values())).first()
+                if not tag_group:
+                    tag_group = TagGroup()
+                    db.add(tag_group)
+                    db.commit()
+                    db.refresh(tag_group)
+
+                tag = Tag(name=tag_name, language_id=language.id, tag_group_id=tag_group.id)
                 db.add(tag)
                 db.commit()
                 db.refresh(tag)
@@ -144,7 +154,16 @@ def add_tags_to_company(db: Session, company_name: str, tag_data_list: CompanyAd
             # 태그 찾기 또는 생성
             tag = db.query(Tag).join(Language).filter(Tag.name == tag_name, Language.code == lang_code).first()
             if not tag:
-                tag = Tag(name=tag_name, language_id=language.id)
+
+                # 태그 그룹 찾기 또는 생성
+                tag_group = db.query(TagGroup).join(Tag).filter(Tag.name.in_(tag_data.tag_name.values())).first()
+                if not tag_group:
+                    tag_group = TagGroup()
+                    db.add(tag_group)
+                    db.commit()
+                    db.refresh(tag_group)
+
+                tag = Tag(name=tag_name, language_id=language.id, tag_group_id=tag_group.id)
                 db.add(tag)
                 db.commit()
                 db.refresh(tag)
@@ -168,4 +187,42 @@ def add_tags_to_company(db: Session, company_name: str, tag_data_list: CompanyAd
     return {
         "company_name": company_name_obj.name,
         "tags": sorted([tag.name for tag in tags], key=lambda name: int(name.split('_')[-1]))
+    }
+
+
+def delete_tag_from_company(db: Session, company_name: str, tag_name: str, language_code: str):
+    # 회사 찾기
+    company = db.query(Company).join(CompanyName).filter(CompanyName.name == company_name).first()
+    if not company:
+        return None
+
+    # 삭제할 태그 찾기
+    tag_to_delete = (
+        db.query(Tag)
+        .join(Language)
+        .join(CompanyTag)
+        .filter(
+            CompanyTag.company_id == company.id,
+            Tag.name == tag_name
+        )
+        .first()
+    )
+
+    # 태그 삭제
+    if tag_to_delete:
+        db.query(CompanyTag).filter(CompanyTag.company_id == company.id, CompanyTag.tag_id == tag_to_delete.id).delete()
+        db.commit()
+
+    # 남은 태그 정보 반환
+    company_name_obj = db.query(CompanyName).join(Language).filter(CompanyName.company_id == company.id,
+                                                                   Language.code == language_code).first()
+    if not company_name_obj:
+        company_name_obj = db.query(CompanyName).filter(CompanyName.company_id == company.id).first()
+
+    tags = db.query(Tag).join(Language).join(CompanyTag).filter(CompanyTag.company_id == company.id,
+                                                                Language.code == language_code).all()
+
+    return {
+        "company_name": company_name_obj.name,
+        "tags": sorted([tag.name for tag in tags])
     }

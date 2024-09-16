@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, DateTime, func, ForeignKey, String, Table, UniqueConstraint
+from sqlalchemy import Column, BigInteger, DateTime, func, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from .database import Base
@@ -33,12 +33,22 @@ class Tag(Base):
 
     id = Column(BigInteger, primary_key=True, index=True)
     language_id = Column(BigInteger, ForeignKey('language.id'))
+    tag_group_id = Column(BigInteger, ForeignKey('tag_group.id'))
     name = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    group = relationship("TagGroup", back_populates="tags")
     language = relationship("Language", back_populates="tags")
     companies = relationship("Company", secondary="company_tag", back_populates="tags")
+
+
+class TagGroup(Base):
+    __tablename__ = 'tag_group'
+
+    id = Column(BigInteger, primary_key=True, index=True)
+
+    tags = relationship("Tag", back_populates="group")
 
 
 class Language(Base):
